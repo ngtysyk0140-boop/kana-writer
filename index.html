@@ -111,11 +111,21 @@ select,textarea{font-family:inherit;font-size:14px;border:1px solid var(--line);
 textarea{width:100%;min-height:60px}
 .prog{height:10px;background:var(--line);border-radius:5px;overflow:hidden;display:flex}
 .prog .w{background:var(--mint);height:100%}.prog .r{background:var(--sky);height:100%}
+
+.picker{position:fixed;inset:0;z-index:50;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px}
+.picker.on{display:flex}
+.picker h1{font-size:26px;margin:0 0 6px;font-family:var(--font-kana, var(--font-text));text-align:center}
+.picker .who{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}
+.picker button{border:3px solid var(--line);background:var(--card);border-radius:28px;width:min(40vw,200px);aspect-ratio:1;font-size:28px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 0 rgba(0,0,0,.06)}
+.picker button span{font-size:64px}
+.picker button.rei{border-color:#f7c6d0}.picker button.ru{border-color:#a9d6f3}
+.whochip{border:2px solid var(--line);background:var(--card);border-radius:14px;padding:5px 12px;font-weight:800;font-size:14px}
 </style>
 
+<div class="picker" id="picker"><h1>だれが やる？</h1><div class="who"><button class="rei" data-who="rei"><span>🌸</span>REI</button><button class="ru" data-who="ru"><span>🐣</span>RU</button></div></div>
 <header>
   <div class="hrow">
-    <div class="logo">✏️ なぞって かこう</div>
+    <div class="logo">✏️ なぞって かこう</div> <button class="whochip" id="whochip" onclick="choosePicker()"></button>
     <div class="seg"><button data-script="h">ひらがな</button><button data-script="k">カタカナ</button></div>
   </div>
   <div class="stages" id="stages"></div>
@@ -153,11 +163,24 @@ const WORDS = {h: WORDS_H, k: WORDS_K};
 const isHira = c => /[ぁ-ゖ]/.test(c), isKata = c => /[ァ-ヺー]/.test(c);
 
 /* ======================= 保存 ======================= */
-const KEY = 'kana-writer-v1';
-let S = load();
+/* ======================= プロフィール（REI / RU） ======================= */
+const PROFILES = {rei:{name:'REI', emoji:'🌸'}, ru:{name:'RU', emoji:'🐣'}};
+let PROFILE = null;
+const BASE_KEY = 'kana-writer-v1';
+function storeKey(){ return PROFILE ? BASE_KEY+':'+PROFILE : BASE_KEY; }
+function choosePicker(){ document.getElementById('picker').classList.add('on'); }
+function selectProfile(id){
+  PROFILE = id; S = load();
+  // 以前の（名前なしの）記録があれば、最初に選んだ子に引き継ぐ
+  try{ const legacy = localStorage.getItem(BASE_KEY); if(legacy && !localStorage.getItem(storeKey())){ localStorage.setItem(storeKey(), legacy); localStorage.removeItem(BASE_KEY); S = load(); } }catch(e){}
+  document.getElementById('picker').classList.remove('on');
+  touchStreak(); render();
+}
+document.querySelectorAll('#picker [data-who]').forEach(b => b.onclick = () => selectProfile(b.dataset.who));
+let S = defaults();
 function defaults(){ return {script:'h', stage:'h1', xp:0, srs:{}, daily:{}, dailyAll:{}, dailyGoal:8, newPerDay:3, strict:'normal', lastDay:'', streak:0, introduced:{}, stars:{}}; }
-function load(){ try{ const s = JSON.parse(localStorage.getItem(KEY)); if(s) return Object.assign(defaults(), s); }catch(e){} return defaults(); }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function load(){ try{ const s = JSON.parse(localStorage.getItem(storeKey())); if(s) return Object.assign(defaults(), s); }catch(e){} return defaults(); }
+function save(){ try{ localStorage.setItem(storeKey(), JSON.stringify(S)); }catch(e){} }
 function today(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function addDays(ds,n){ const d=new Date(ds+'T00:00:00'); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function touchStreak(){ const t=today(); if(S.lastDay===t) return; S.streak=(S.lastDay===addDays(t,-1))?S.streak+1:1; S.lastDay=t; save(); }
@@ -187,6 +210,7 @@ function wordsFor(cs){ const set=new Set(cs); const known=knownSet(cs); const ca
   const one = cand.filter(w => [...w[0]].filter(c=>!known.has(c)).length<=1); return one.length>=3 ? one : cand; }
 
 function renderHeader(){
+  const wc = document.getElementById('whochip'); if(wc && PROFILE) wc.textContent = PROFILES[PROFILE].emoji+' '+PROFILES[PROFILE].name+' ▾';
   document.querySelectorAll('.seg button').forEach(b=>{ b.classList.toggle('on', b.dataset.script===S.script); b.onclick=()=>{ S.script=b.dataset.script; S.stage=STAGES[S.script][0].id; save(); render(); }; });
   $('#stages').innerHTML = STAGES[S.script].map(s=>{ const m=s.chars.filter(c=>charState(c)===2).length; return `<button class="stg ${s.id===S.stage?'on':''}" data-st="${s.id}">${s.name}<small>${m}/${s.chars.length} おぼえた</small></button>`; }).join('');
   document.querySelectorAll('.stg').forEach(b=>b.onclick=()=>{ S.stage=b.dataset.st; save(); render(); });
@@ -400,5 +424,5 @@ function bind(){
   const ib=$('#impbtn'); if(ib) ib.onclick=()=>{ try{ const o=JSON.parse($('#iotext').value); if(!o||typeof o!=='object') throw 0; S=Object.assign(defaults(),o); save(); render(); toast('読み込みました'); }catch(e){ toast('読み込めませんでした'); } };
   const rs=$('#reset'); if(rs) rs.onclick=()=>{ $('#resetrow').innerHTML='<span class="muted">学習の記録をすべて消します。</span><button class="btn sm" id="reset2" style="background:var(--ng)">本当に消す</button><button class="btn ghost sm" id="reset3">やめる</button>'; $('#reset2').onclick=()=>{ S=defaults(); save(); render(); }; $('#reset3').onclick=()=>render(); };
 }
-touchStreak(); render();
+choosePicker();
 </script>
