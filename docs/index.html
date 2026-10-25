@@ -144,6 +144,40 @@ textarea{width:100%;min-height:60px}
 .cover .cv-title small{display:block;font-size:14px;font-weight:600;color:#7a6f68;letter-spacing:.1em;margin-top:4px}
 .cover .tap{position:relative;z-index:1;margin:18px 0 calc(40px + env(safe-area-inset-bottom,0px));background:#f6a98f;color:#fff;font-weight:800;font-size:20px;padding:14px 32px;border-radius:30px;animation:pulse 1.6s ease-in-out infinite;box-shadow:0 6px 0 rgba(0,0,0,.1)}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+
+.mascot{display:flex;gap:10px;align-items:flex-end;margin:4px 0 10px}
+.mascot .mimg{width:92px;height:92px;object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 2px 2px rgba(0,0,0,.08));transform-origin:50% 90%}
+.mascot .memoji{width:92px;height:92px;font-size:66px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;transform-origin:50% 90%}
+.mascot .bubble{position:relative;background:var(--card);border:2px solid var(--line);border-radius:18px;padding:10px 14px;font-family:var(--font-kana, var(--font-text));font-weight:800;font-size:17px;line-height:1.5;flex:1;min-width:0;animation:pop .35s ease-out}
+.mascot .bubble::before{content:"";position:absolute;left:-10px;bottom:18px;border:8px solid transparent;border-right-color:var(--line);border-left:0}
+.mascot .bubble::after{content:"";position:absolute;left:-7px;bottom:19px;border:7px solid transparent;border-right-color:var(--card);border-left:0}
+.mascot.sm .mimg,.mascot.sm .memoji{width:64px;height:64px;font-size:44px}
+.mascot.sm .bubble{font-size:15px;padding:8px 12px}
+/* 動き */
+.mv-welcome{animation:float 2.4s ease-in-out infinite}
+.mv-happy{animation:bounce .7s ease-out 2}
+.mv-cheer{animation:jump .6s ease-in-out 3}
+.mv-oops{animation:shake .5s ease-in-out 1}
+.mv-sad{animation:droop 1.6s ease-in-out infinite}
+.mv-hint{animation:nod 1s ease-in-out 2}
+.mv-explain{animation:float 2.4s ease-in-out infinite}
+.mv-think{animation:tilt 1.8s ease-in-out infinite}
+.mv-write{animation:scribble 1s ease-in-out infinite}
+.mv-read{animation:float 2.4s ease-in-out infinite}
+.mv-sleep{animation:breathe 2.6s ease-in-out infinite}
+.mv-surprise{animation:popin .5s cubic-bezier(.2,1.6,.4,1) 1}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes bounce{0%,100%{transform:translateY(0) scale(1)}40%{transform:translateY(-14px) scale(1.04)}60%{transform:translateY(0) scale(.97,1.03)}}
+@keyframes jump{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-18px) rotate(-6deg)}60%{transform:translateY(-10px) rotate(6deg)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px) rotate(-4deg)}40%{transform:translateX(6px) rotate(4deg)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+@keyframes droop{0%,100%{transform:rotate(0) translateY(0)}50%{transform:rotate(-5deg) translateY(3px)}}
+@keyframes nod{0%,100%{transform:rotate(0)}30%{transform:rotate(8deg) translateY(-3px)}60%{transform:rotate(-3deg)}}
+@keyframes tilt{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+@keyframes scribble{0%,100%{transform:translate(0,0)}25%{transform:translate(2px,-2px)}50%{transform:translate(-2px,1px)}75%{transform:translate(1px,2px)}}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+@keyframes popin{0%{transform:scale(.6)}100%{transform:scale(1)}}
+@keyframes pop{0%{transform:scale(.9);opacity:0}100%{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion: reduce){.mascot *{animation:none!important}}
 </style>
 
 <div class="cover" id="cover" onclick="document.getElementById('cover').classList.remove('on'); choosePicker();"><div class="ph"></div><img src="cover.png" alt="" onerror="this.remove()"><div class="cv-title">なぞって かこう<small>HIRAGANA · KATAKANA</small></div><div class="tap">タップして はじめる</div></div>
@@ -188,6 +222,25 @@ const WORDS = {h: WORDS_H, k: WORDS_K};
 const isHira = c => /[ぁ-ゖ]/.test(c), isKata = c => /[ァ-ヺー]/.test(c);
 
 /* ======================= 保存 ======================= */
+/* ======================= マスコット（キャラクター） ======================= */
+const MASCOT = {emoji:'🐤', name:'ぴよ'};
+const LINES = {
+  welcome:['きょうも いっしょに がんばろう','まってたよ！','きょうは なにから やる？'],
+  happy:['せいかい！','いいね！','その ちょうし！','ばっちり！','やったね！'],
+  cheer:['すごい！ 3れんぞく！','さいこう！','キラキラ してるよ！'],
+  oops:['おしい！ もういちど','だいじょうぶ。つぎは できる','ここで おぼえれば OK！'],
+  sad:['むずかしいね…。いっしょに ゆっくり みよう','あせらなくて いいよ。もういちど'],
+  hint:['ヒントだよ','ここに ちゅうもく！'],
+  explain:['なるほど！ ここが ポイント','おぼえかたの コツだよ'],
+  think:['うーん、どれかな？','じっくり かんがえよう'],
+  write:['ゆっくり ていねいに かこう','●から はじめてね'],
+  read:['こえに だして よんでみよう','どれかな？'],
+  sleep:['おつかれさま！ よく がんばったね','きょうは ここまで。また あしたね'],
+  surprise:['わあ！ あたらしい バッジ！','びっくり！ すごい きろく！'],
+};
+function mascot(expr, text, cls=''){ const arr = LINES[expr]||LINES.happy; const t = text || arr[Math.floor(Math.random()*arr.length)];
+  return `<div class="mascot ${cls}"><img class="mimg mv-${expr}" src="chara/${expr}.png" alt="" onerror="this.outerHTML='<span class=&quot;memoji mv-${expr}&quot;>${MASCOT.emoji}</span>'"><div class="bubble">${t}</div></div>`; }
+function greeting(){ const h=new Date().getHours(); return h<10?'おはよう！':h<17?'こんにちは！':'こんばんは！'; }
 /* ======================= プロフィール（REI / RU） ======================= */
 const PROFILES = {rei:{name:'REI', emoji:'🌸'}, ru:{name:'RU', emoji:'🐣'}};
 let PROFILE = null;
@@ -255,7 +308,8 @@ function badges(){ const {tot,days,m}=totals(); return [['🌱','はじめの �
 function viewHome(){
   const st=stage(); const todayN=S.dailyAll[today()]||0, goal=S.dailyGoal; const pct=Math.min(100,Math.round(todayN/goal*100)); const done=todayN>=goal; const {tot,days,m}=totals();
   const due = ALL[S.script].flatMap(c=>['t|'+c,'w|'+c]).filter(isDue).length; const weak = Object.keys(S.srs).filter(isWeak).length;
-  return `<div class="card"><div class="goal"><div class="ring" style="background:conic-gradient(var(--mint) ${pct}%, var(--line) 0)"><span>${pct}%</span></div>
+  const greet = done ? mascot('cheer', greeting()+' きょうは もう ばっちり！') : mascot('welcome', greeting()+(due>0?' ふくしゅうが まってるよ':' いっしょに かこう！'));
+  return greet + `<div class="card"><div class="goal"><div class="ring" style="background:conic-gradient(var(--mint) ${pct}%, var(--line) 0)"><span>${pct}%</span></div>
     <div><div style="font-size:20px;font-weight:800;font-family:var(--font-kana)">きょうの もくひょう：${todayN} / ${goal}</div><div class="muted">${done?'たっせい！ もっと やっても いいよ':'あと '+(goal-todayN)+'かい'}</div>
     <div class="row" style="margin-top:10px"><button class="btn big ${done?'mint':''}" id="start">▶ はじめる</button></div></div></div>
     ${done?'<div class="done-banner" style="margin-top:10px">🎉 きょうの ぶんは おしまい！ よく がんばったね</div>':''}
@@ -343,7 +397,7 @@ function startTrace(ch, opts={}){
   const ps=KANA_STROKES[ch]; if(!ps){ toast('この もじは まだ ありません'); return; }
   TR={ch, cur:0, tries:0, scores:[], opts};
   openModal(`<div class="row" style="justify-content:space-between"><div class="big" style="font-size:40px">${ch}</div><button class="btn ghost sm" onclick="abortAll()">やめる</button></div>
-   <div class="fb hint" id="fb">●から じゅんばんに なぞろう（${ps.length}かく）</div>${canvasHTML()}
+   <div id="mfb">${mascot('write','●から じゅんばんに なぞろう（'+ps.length+'かく）','sm')}</div><div class="fb hint" id="fb" style="display:none"></div>${canvasHTML()}
    <div class="row" style="justify-content:center"><button class="btn ghost sm" onclick="traceDemo()">▶ おてほん</button><button class="btn ghost sm" onclick="traceRedo()">もういちど</button></div><div class="stars" id="stars"></div>`);
   setupCanvas(onTraceStroke); drawGuide(); traceDemo(true);
 }
@@ -352,18 +406,19 @@ let demoTimer=null;
 function traceDemo(onlyCurrent){ clearTimeout(demoTimer); const ps=KANA_STROKES[TR.ch]; const i=TR.cur; if(i>=ps.length) return; const svg=$('#gsvg'); svg.innerHTML = guideSVG(TR.ch,{mode:'trace',done:TR.cur,cur:TR.cur}); const path=svg.querySelectorAll('path')[i]; if(!path) return; const L=path.getTotalLength(); path.classList.remove('cur'); path.classList.add('done'); path.style.strokeDasharray=L; path.style.strokeDashoffset=L; path.style.transition='none'; requestAnimationFrame(()=>{ path.style.transition='stroke-dashoffset 0.9s ease'; path.style.strokeDashoffset=0; }); demoTimer=setTimeout(()=>drawGuide(), 1400); }
 function onTraceStroke(pts){
   const ps=KANA_STROKES[TR.ch]; if(TR.cur>=ps.length) return; const size=CV.w; const r=evalStroke(pts, ps[TR.cur], size); const fb=$('#fb');
-  if(r.pass){ TR.scores.push(r.score); TR.cur++; TR.tries=0; fb.className='fb ok'; fb.textContent=['','','じょうず！','とても じょうず！'][r.score]; }
-  else { TR.tries++; undoStroke(); fb.className='fb ng'; fb.textContent=r.hint||'もういちど';
-    if(TR.tries>=3){ TR.scores.push(1); TR.cur++; TR.tries=0; fb.className='fb hint'; fb.textContent='おてほんを みてから つぎへ'; } else { traceDemo(true); return; } }
+  const say=(expr,t)=>{ const m=$('#mfb'); if(m) m.innerHTML=mascot(expr,t,'sm'); };
+  if(r.pass){ TR.scores.push(r.score); TR.cur++; TR.tries=0; say('happy', ['','','じょうず！','とても じょうず！'][r.score]); }
+  else { TR.tries++; undoStroke(); say(TR.tries>=2?'sad':'hint', r.hint||'もういちど');
+    if(TR.tries>=3){ TR.scores.push(1); TR.cur++; TR.tries=0; say('explain','おてほんを みてから つぎへ'); } else { traceDemo(true); return; } }
   if(TR.cur>=ps.length) finishTrace(); else drawGuide();
 }
-function traceRedo(){ TR.cur=0; TR.tries=0; TR.scores=[]; clearCanvas(); $('#fb').className='fb hint'; $('#fb').textContent='もういちど ●から'; drawGuide(); }
+function traceRedo(){ TR.cur=0; TR.tries=0; TR.scores=[]; clearCanvas(); const m=$('#mfb'); if(m) m.innerHTML=mascot('write','もういちど ●から','sm'); drawGuide(); }
 function finishTrace(){
   const avg=TR.scores.reduce((a,b)=>a+b,0)/TR.scores.length; const stars=avg>=2.7?3:avg>=2?2:1; const ok=stars>=2;
   S.stars[TR.ch]=Math.max(S.stars[TR.ch]||0, stars); answer('t|'+TR.ch, ok); S.xp+= stars*3; touchStreak(); save();
   $('#gsvg').innerHTML = guideSVG(TR.ch,{mode:'trace',done:99,cur:99});
   $('#stars').innerHTML = '★'.repeat(stars)+'<span style="opacity:.25">'+'★'.repeat(3-stars)+'</span>';
-  $('#fb').className='fb '+(ok?'ok':'hint'); $('#fb').textContent = stars===3?'かんぺき！ ていねいに かけたね':stars===2?'よく かけたね！':'もういちど れんしゅう しよう';
+  { const m=$('#mfb'); if(m) m.innerHTML = mascot(stars===3?'cheer':stars===2?'happy':'oops', stars===3?'かんぺき！ ていねいに かけたね':stars===2?'よく かけたね！':'もういちど れんしゅう しよう','sm'); }
   const nextLabel = SES ? 'つぎへ →' : 'おわる';
   $('#sheet').insertAdjacentHTML('beforeend', `<div class="row" style="justify-content:center;margin-top:10px"><button class="btn ghost" onclick="traceRedo()">もういちど</button><button class="btn" onclick="proceed(${ok})">${nextLabel}</button></div>`);
 }
@@ -377,7 +432,7 @@ function startWrite(ch){
   const wordHTML = w ? w[0].split('').map((c,i)=> (c===ch && i===w[0].indexOf(ch)) ? '<span class="blank"></span>' : esc(c)).join('') : '';
   openModal(`<div class="row" style="justify-content:space-between"><span class="muted">かく</span><button class="btn ghost sm" onclick="abortAll()">やめる</button></div>
    ${w?`<div class="emoji">${w[1]}</div><div class="word">${wordHTML}</div>`:`<div class="fb hint">「${ch}」を かいてみよう</div>`}
-   <div class="fb hint" id="fb">あいている もじを かこう${w?'　<button class="btn ghost sm" onclick="speak(\''+w[0]+'\')">🔊 きく</button>':''}</div>${canvasHTML()}
+   <div id="mfb">${mascot('write','あいている もじを かこう','sm')}</div><div class="row" style="justify-content:center">${w?'<button class="btn ghost sm" onclick="speak(\''+w[0]+'\')">🔊 きく</button>':''}</div><div class="fb hint" id="fb" style="display:none"></div>${canvasHTML()}
    <div class="row" style="justify-content:center" id="wbtns"><button class="btn ghost sm" onclick="undoStroke()">ひとつ もどす</button><button class="btn ghost sm" onclick="clearCanvas()">けす</button><button class="btn mint" onclick="revealWrite()">できた！</button></div><div class="stars" id="stars"></div>`);
   setupCanvas(); $('#gsvg').innerHTML='';
 }
@@ -388,7 +443,7 @@ function revealWrite(){
   if(CV.strokes.length===ps.length){ const sc=CV.strokes.map((st,i)=>evalStroke(st, ps[i], size).score); const avg=sc.reduce((a,b)=>a+b,0)/sc.length; stars=avg>=2.7?3:avg>=2?2:avg>=1?1:0; note = stars>=2?'かたちも かきじゅんも いいね':'おてほんと くらべてみよう'; }
   else if(CV.strokes.length===0){ note='まだ かいて いないよ'; } else { note = `かくすうが ちがうかな？（おてほんは ${ps.length}かく、かいたのは ${CV.strokes.length}かく）`; }
   $('#stars').innerHTML = stars?'★'.repeat(stars)+'<span style="opacity:.25">'+'★'.repeat(3-stars)+'</span>':'';
-  $('#fb').className='fb hint'; $('#fb').textContent = note;
+  { const m=$('#mfb'); if(m) m.innerHTML = mascot(stars>=2?'happy':'explain', note, 'sm'); }
   $('#wbtns').innerHTML = `<span class="muted">おてほんと みくらべて</span><button class="btn mint" onclick="judgeWrite(true)">○ かけた</button><button class="btn ghost" onclick="judgeWrite(false)">△ もういちど</button><button class="btn ghost sm" onclick="startTrace('${WR.ch}', {from:'write'})">✏️ なぞる</button>`;
 }
 function judgeWrite(ok){ answer('w|'+WR.ch, ok); S.xp += ok?5:1; touchStreak(); save(); if(ok && WR.w) speak(WR.w[0]); proceed(ok); }
@@ -399,12 +454,12 @@ function startRead(mode, word){
   const pool = wordsFor(learned().length>=5 ? learned() : stage().chars); if(pool.length<3){ toast('まだ ことばが すくないよ'); return; }
   const w = word || pool[Math.floor(Math.random()*pool.length)]; const others = pick(pool.filter(x=>x[0]!==w[0] && x[1]!==w[1]), 2); const ch = shuffle([w,...others]);
   RD={mode,w};
-  if(mode==='A') openModal(`<div class="row" style="justify-content:space-between"><span class="muted">よむ</span><button class="btn ghost sm" onclick="abortAll()">やめる</button></div><div class="emoji">${w[1]}</div><div class="fb hint">これは どれ？</div><div class="choices">${ch.map(x=>`<button class="choice" data-v="${esc(x[0])}" onclick="judgeRead(this)">${esc(x[0])}</button>`).join('')}</div><div id="fb"></div>`);
-  else openModal(`<div class="row" style="justify-content:space-between"><span class="muted">よむ</span><button class="btn ghost sm" onclick="abortAll()">やめる</button></div><div class="word">${esc(w[0])}</div><div class="fb hint">どの え？</div><div class="choices">${ch.map(x=>`<button class="choice em" data-v="${esc(x[0])}" onclick="judgeRead(this)">${x[1]}</button>`).join('')}</div><div id="fb"></div>`);
+  if(mode==='A') openModal(`<div class="row" style="justify-content:space-between"><span class="muted">よむ</span><button class="btn ghost sm" onclick="abortAll()">やめる</button></div><div class="emoji">${w[1]}</div>${mascot('read','これは どれ？','sm')}<div class="choices">${ch.map(x=>`<button class="choice" data-v="${esc(x[0])}" onclick="judgeRead(this)">${esc(x[0])}</button>`).join('')}</div><div id="fb"></div>`);
+  else openModal(`<div class="row" style="justify-content:space-between"><span class="muted">よむ</span><button class="btn ghost sm" onclick="abortAll()">やめる</button></div><div class="word">${esc(w[0])}</div>${mascot('read','どの え？','sm')}<div class="choices">${ch.map(x=>`<button class="choice em" data-v="${esc(x[0])}" onclick="judgeRead(this)">${x[1]}</button>`).join('')}</div><div id="fb"></div>`);
 }
 function judgeRead(btn){ const ok = btn.dataset.v===RD.w[0]; document.querySelectorAll('.choice').forEach(b=>{ b.disabled=true; if(b.dataset.v===RD.w[0]) b.classList.add('ok'); }); if(!ok) btn.classList.add('ng');
   answer('r|'+RD.w[0], ok); S.xp += ok?3:0; touchStreak(); save(); speak(RD.w[0]);
-  $('#fb').innerHTML = `<div class="fb ${ok?'ok':'ng'}">${ok?'⭕ せいかい！':'❌ こたえは「'+esc(RD.w[0])+'」'}　${RD.w[1]} ${esc(RD.w[0])}</div><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" onclick="proceed(${ok})">${SES?'つぎへ →':'もういっかい'}</button></div>`; }
+  $('#fb').innerHTML = mascot(ok?'happy':'oops', null, 'sm') + `<div class="fb ${ok?'ok':'ng'}">${ok?'⭕ せいかい！':'❌ こたえは「'+esc(RD.w[0])+'」'}　${RD.w[1]} ${esc(RD.w[0])}</div><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" onclick="proceed(${ok})">${SES?'つぎへ →':'もういっかい'}</button></div>`; }
 function speak(t){ try{ if(!('speechSynthesis' in window)) return; const u=new SpeechSynthesisUtterance(t); u.lang='ja-JP'; u.rate=0.85; speechSynthesis.cancel(); speechSynthesis.speak(u); }catch(e){} }
 
 /* ======================= きょうの れんしゅう（セッション） ======================= */
@@ -429,7 +484,7 @@ function startSession(){ SES=buildSession(); if(!SES.queue.length){ toast('き�
 function nextInSession(){ if(!SES.queue.length){ return endSession(); } const it=SES.queue.shift(); SES.cur=it; if(it.kind==='trace') startTrace(it.ch); else if(it.kind==='write') startWrite(it.ch); else startRead(Math.random()<0.5?'A':'B', it.w); }
 function proceed(ok){ if(!SES){ closeModal(); return; } SES.done++; if(ok) SES.ok++; else { const it=SES.cur; if(it.kind!=='read' && !it.retried){ it.retried=true; SES.queue.splice(Math.min(3,SES.queue.length),0,it); } } nextInSession(); }
 function endSession(){ const n=SES.done, c=SES.ok; const todayN=S.dailyAll[today()]||0, goal=S.dailyGoal; SES=null; render();
-  openModal(`<h2 style="text-align:center">おつかれさま！</h2><div class="big">${c} / ${n}</div>${todayN>=goal?'<div class="done-banner">🎉 きょうの もくひょう たっせい！</div>':'<p style="text-align:center;font-weight:800;font-family:var(--font-kana)">きょう '+todayN+' / '+goal+'　あと '+(goal-todayN)+'かい</p>'}<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" onclick="closeModal()">もどる</button></div>`); }
+  openModal(mascot(todayN>=goal?'cheer':'sleep') + `<h2 style="text-align:center">おつかれさま！</h2><div class="big">${c} / ${n}</div>${todayN>=goal?'<div class="done-banner">🎉 きょうの もくひょう たっせい！</div>':'<p style="text-align:center;font-weight:800;font-family:var(--font-kana)">きょう '+todayN+' / '+goal+'　あと '+(goal-todayN)+'かい</p>'}<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" onclick="closeModal()">もどる</button></div>`); }
 function abortAll(){ clearTimeout(demoTimer); SES=null; closeModal(); }
 
 /* ======================= モーダル・イベント ======================= */
