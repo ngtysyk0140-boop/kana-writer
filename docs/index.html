@@ -178,13 +178,15 @@ textarea{width:100%;min-height:60px}
 @keyframes popin{0%{transform:scale(.6)}100%{transform:scale(1)}}
 @keyframes pop{0%{transform:scale(.9);opacity:0}100%{transform:scale(1);opacity:1}}
 @media (prefers-reduced-motion: reduce){.mascot *{animation:none!important}}
+
+.sndbtn{border:2px solid var(--line);background:var(--card);border-radius:14px;padding:5px 10px;font-size:15px}
 </style>
 
-<div class="cover" id="cover" onclick="document.getElementById('cover').classList.remove('on'); choosePicker();"><div class="ph"></div><img src="cover.png" alt="" onerror="this.remove()"><div class="cv-title">なぞって かこう<small>HIRAGANA · KATAKANA</small></div><div class="tap">タップして はじめる</div></div>
+<div class="cover" id="cover" onclick="sndUnlock(); document.getElementById('cover').classList.remove('on'); choosePicker();"><div class="ph"></div><img src="cover.png" alt="" onerror="this.remove()"><div class="cv-title">なぞって かこう<small>HIRAGANA · KATAKANA</small></div><div class="tap">タップして はじめる</div></div>
 <div class="picker" id="picker"><h1>だれが やる？</h1><div class="who"><button class="rei" data-who="rei"><span>🌸</span>REI</button><button class="ru" data-who="ru"><span>🐣</span>RU</button></div></div>
 <header>
   <div class="hrow">
-    <div class="logo">✏️ なぞって かこう</div> <button class="whochip" id="whochip" onclick="choosePicker()"></button>
+    <div class="logo">✏️ なぞって かこう</div> <button class="whochip" id="whochip" onclick="choosePicker()"></button> <button class="sndbtn" id="sndbtn" onclick="cycleSound()">🎵</button>
     <div class="seg"><button data-script="h">ひらがな</button><button data-script="k">カタカナ</button></div>
   </div>
   <div class="stages" id="stages"></div>
@@ -222,6 +224,47 @@ const WORDS = {h: WORDS_H, k: WORDS_K};
 const isHira = c => /[ぁ-ゖ]/.test(c), isKata = c => /[ァ-ヺー]/.test(c);
 
 /* ======================= 保存 ======================= */
+/* ======================= 音（BGM・効果音） ======================= */
+const SOUND_FILES = ['bgm_home','bgm_play','sfx_tap','sfx_correct','sfx_wrong','sfx_cheer','sfx_badge','sfx_end','sfx_goal','sfx_stroke_ok','sfx_stroke_ng'];
+const SND = {ctx:null, have:{}, buf:{}, bgmEl:null, cur:null, unlocked:false};
+async function sndProbe(){ await Promise.all(SOUND_FILES.map(async n => { try{ const r = await fetch('sound/'+n+'.mp3', {method:'HEAD'}); SND.have[n] = r.ok; }catch(e){ SND.have[n]=false; } })); }
+function sndUnlock(){ if(SND.unlocked) return; SND.unlocked=true; try{ SND.ctx = new (window.AudioContext||window.webkitAudioContext)(); SND.ctx.resume(); }catch(e){}
+  if(!SND.bgmEl){ SND.bgmEl = new Audio(); SND.bgmEl.loop = true; SND.bgmEl.volume = 0; }
+  // 無音を一度再生して iOS の再生許可を得る
+  try{ SND.bgmEl.src = 'data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCA'; SND.bgmEl.play().catch(()=>{}); }catch(e){}
+}
+function soundMode(){ return S.sound || 'all'; }  // all / sfx / off
+async function sfxBuffer(n){ if(SND.buf[n]) return SND.buf[n]; if(!SND.have[n] || !SND.ctx) return null; try{ const ab = await (await fetch('sound/'+n+'.mp3')).arrayBuffer(); SND.buf[n] = await SND.ctx.decodeAudioData(ab); return SND.buf[n]; }catch(e){ return null; } }
+async function sfx(name){
+  if(soundMode()==='off' || !SND.ctx) return; const n = 'sfx_'+name;
+  const b = await sfxBuffer(n);
+  if(b){ const s = SND.ctx.createBufferSource(); s.buffer=b; const g=SND.ctx.createGain(); g.gain.value=0.9; s.connect(g).connect(SND.ctx.destination); s.start(); return; }
+  synth(name);
+}
+/* ファイルが無いときの合成音 */
+function tone(f, t0, dur, type='sine', vol=0.18){ const c=SND.ctx; const o=c.createOscillator(), g=c.createGain(); o.type=type; o.frequency.value=f; g.gain.setValueAtTime(0.0001,c.currentTime+t0); g.gain.exponentialRampToValueAtTime(vol,c.currentTime+t0+0.02); g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+t0+dur); o.connect(g).connect(c.destination); o.start(c.currentTime+t0); o.stop(c.currentTime+t0+dur+0.05); }
+function synth(name){ if(!SND.ctx) return; switch(name){
+  case 'tap': tone(880,0,0.06,'triangle',0.08); break;
+  case 'correct': tone(784,0,0.12,'sine'); tone(1175,0.12,0.22,'sine'); break;
+  case 'wrong': tone(220,0,0.18,'square',0.06); tone(185,0.2,0.28,'square',0.06); break;
+  case 'cheer': [523,659,784,1047].forEach((f,i)=>tone(f,i*0.09,0.25,'triangle',0.14)); tone(1319,0.4,0.5,'triangle',0.14); break;
+  case 'badge': [1047,1319,1568,2093].forEach((f,i)=>tone(f,i*0.07,0.3,'sine',0.12)); break;
+  case 'end': tone(659,0,0.2,'sine'); tone(523,0.22,0.2,'sine'); tone(392,0.44,0.5,'sine'); break;
+  case 'goal': [392,523,659,784,1047].forEach((f,i)=>tone(f,i*0.1,0.3,'triangle',0.14)); tone(1047,0.6,0.7,'triangle',0.16); break;
+  case 'stroke_ok': tone(1319,0,0.08,'sine',0.1); break;
+  case 'stroke_ng': tone(260,0,0.12,'triangle',0.08); break;
+} }
+function bgm(track){ // 'home' | 'play' | null
+  if(!SND.bgmEl) return; const n = track ? 'bgm_'+track : null;
+  if(soundMode()!=='all' || !n || !SND.have[n]){ SND.cur=null; fadeTo(0, true); return; }
+  if(SND.cur===n){ fadeTo(0.35); return; }
+  SND.cur = n; SND.bgmEl.src = 'sound/'+n+'.mp3'; SND.bgmEl.volume = 0; SND.bgmEl.play().catch(()=>{}); fadeTo(0.35);
+}
+let fadeTimer=null;
+function fadeTo(v, pauseAtZero){ clearInterval(fadeTimer); const el=SND.bgmEl; if(!el) return; fadeTimer=setInterval(()=>{ const d=v-el.volume; if(Math.abs(d)<0.03){ el.volume=v; clearInterval(fadeTimer); if(v===0 && pauseAtZero){ el.pause(); } return; } el.volume = Math.max(0, Math.min(1, el.volume + Math.sign(d)*0.03)); }, 60); }
+function cycleSound(){ const m = soundMode(); S.sound = m==='all'?'sfx':m==='sfx'?'off':'all'; save(); renderHeader(); if(S.sound==='all') bgm(SES||TEST||(typeof TR!=='undefined'&&TR)?'play':'home'); else bgm(null); if(S.sound!=='off') sfx('tap'); }
+function soundIcon(){ const m=soundMode(); return m==='all'?'🎵':m==='sfx'?'🔔':'🔇'; }
+sndProbe();
 /* ======================= マスコット（キャラクター） ======================= */
 const MASCOT = {emoji:'🐤', name:'ぴよ'};
 const LINES = {
@@ -252,7 +295,7 @@ function selectProfile(id){
   // 以前の（名前なしの）記録があれば、最初に選んだ子に引き継ぐ
   try{ const legacy = localStorage.getItem(BASE_KEY); if(legacy && !localStorage.getItem(storeKey())){ localStorage.setItem(storeKey(), legacy); localStorage.removeItem(BASE_KEY); S = load(); } }catch(e){}
   document.getElementById('picker').classList.remove('on');
-  touchStreak(); render();
+  touchStreak(); render(); sfx('tap'); bgm('home');
 }
 document.querySelectorAll('#picker [data-who]').forEach(b => b.onclick = () => selectProfile(b.dataset.who));
 let S = defaults();
@@ -288,6 +331,7 @@ function wordsFor(cs){ const set=new Set(cs); const known=knownSet(cs); const ca
   const one = cand.filter(w => [...w[0]].filter(c=>!known.has(c)).length<=1); return one.length>=3 ? one : cand; }
 
 function renderHeader(){
+  const sb = document.getElementById('sndbtn'); if(sb) sb.textContent = soundIcon();
   const wc = document.getElementById('whochip'); if(wc && PROFILE) wc.textContent = PROFILES[PROFILE].emoji+' '+PROFILES[PROFILE].name+' ▾';
   document.querySelectorAll('.seg button').forEach(b=>{ b.classList.toggle('on', b.dataset.script===S.script); b.onclick=()=>{ S.script=b.dataset.script; S.stage=STAGES[S.script][0].id; save(); render(); }; });
   $('#stages').innerHTML = STAGES[S.script].map(s=>{ const m=s.chars.filter(c=>charState(c)===2).length; return `<button class="stg ${s.id===S.stage?'on':''}" data-st="${s.id}">${s.name}<small>${m}/${s.chars.length} おぼえた</small></button>`; }).join('');
@@ -394,7 +438,7 @@ function evalStroke(user, d, size){
 /* ======================= なぞる ======================= */
 let TR=null;
 function startTrace(ch, opts={}){
-  const ps=KANA_STROKES[ch]; if(!ps){ toast('この もじは まだ ありません'); return; }
+  const ps=KANA_STROKES[ch]; if(!ps){ toast('この もじは まだ ありません'); return; } if(!SES) bgm('play');
   TR={ch, cur:0, tries:0, scores:[], opts};
   openModal(`<div class="row" style="justify-content:space-between"><div class="big" style="font-size:40px">${ch}</div><button class="btn ghost sm" onclick="abortAll()">やめる</button></div>
    <div id="mfb">${mascot('write','●から じゅんばんに なぞろう（'+ps.length+'かく）','sm')}</div><div class="fb hint" id="fb" style="display:none"></div>${canvasHTML()}
@@ -407,15 +451,15 @@ function traceDemo(onlyCurrent){ clearTimeout(demoTimer); const ps=KANA_STROKES[
 function onTraceStroke(pts){
   const ps=KANA_STROKES[TR.ch]; if(TR.cur>=ps.length) return; const size=CV.w; const r=evalStroke(pts, ps[TR.cur], size); const fb=$('#fb');
   const say=(expr,t)=>{ const m=$('#mfb'); if(m) m.innerHTML=mascot(expr,t,'sm'); };
-  if(r.pass){ TR.scores.push(r.score); TR.cur++; TR.tries=0; say('happy', ['','','じょうず！','とても じょうず！'][r.score]); }
-  else { TR.tries++; undoStroke(); say(TR.tries>=2?'sad':'hint', r.hint||'もういちど');
+  if(r.pass){ TR.scores.push(r.score); TR.cur++; TR.tries=0; sfx('stroke_ok'); say('happy', ['','','じょうず！','とても じょうず！'][r.score]); }
+  else { TR.tries++; undoStroke(); sfx('stroke_ng'); say(TR.tries>=2?'sad':'hint', r.hint||'もういちど');
     if(TR.tries>=3){ TR.scores.push(1); TR.cur++; TR.tries=0; say('explain','おてほんを みてから つぎへ'); } else { traceDemo(true); return; } }
   if(TR.cur>=ps.length) finishTrace(); else drawGuide();
 }
 function traceRedo(){ TR.cur=0; TR.tries=0; TR.scores=[]; clearCanvas(); const m=$('#mfb'); if(m) m.innerHTML=mascot('write','もういちど ●から','sm'); drawGuide(); }
 function finishTrace(){
   const avg=TR.scores.reduce((a,b)=>a+b,0)/TR.scores.length; const stars=avg>=2.7?3:avg>=2?2:1; const ok=stars>=2;
-  S.stars[TR.ch]=Math.max(S.stars[TR.ch]||0, stars); answer('t|'+TR.ch, ok); S.xp+= stars*3; touchStreak(); save();
+  S.stars[TR.ch]=Math.max(S.stars[TR.ch]||0, stars); answer('t|'+TR.ch, ok); S.xp+= stars*3; touchStreak(); save(); sfx(stars===3?'cheer':ok?'correct':'wrong');
   $('#gsvg').innerHTML = guideSVG(TR.ch,{mode:'trace',done:99,cur:99});
   $('#stars').innerHTML = '★'.repeat(stars)+'<span style="opacity:.25">'+'★'.repeat(3-stars)+'</span>';
   { const m=$('#mfb'); if(m) m.innerHTML = mascot(stars===3?'cheer':stars===2?'happy':'oops', stars===3?'かんぺき！ ていねいに かけたね':stars===2?'よく かけたね！':'もういちど れんしゅう しよう','sm'); }
@@ -446,7 +490,7 @@ function revealWrite(){
   { const m=$('#mfb'); if(m) m.innerHTML = mascot(stars>=2?'happy':'explain', note, 'sm'); }
   $('#wbtns').innerHTML = `<span class="muted">おてほんと みくらべて</span><button class="btn mint" onclick="judgeWrite(true)">○ かけた</button><button class="btn ghost" onclick="judgeWrite(false)">△ もういちど</button><button class="btn ghost sm" onclick="startTrace('${WR.ch}', {from:'write'})">✏️ なぞる</button>`;
 }
-function judgeWrite(ok){ answer('w|'+WR.ch, ok); S.xp += ok?5:1; touchStreak(); save(); if(ok && WR.w) speak(WR.w[0]); proceed(ok); }
+function judgeWrite(ok){ answer('w|'+WR.ch, ok); S.xp += ok?5:1; touchStreak(); save(); sfx(ok?'correct':'wrong'); if(ok && WR.w) speak(WR.w[0]); proceed(ok); }
 
 /* ======================= よむ ======================= */
 let RD=null;
@@ -458,7 +502,7 @@ function startRead(mode, word){
   else openModal(`<div class="row" style="justify-content:space-between"><span class="muted">よむ</span><button class="btn ghost sm" onclick="abortAll()">やめる</button></div><div class="word">${esc(w[0])}</div>${mascot('read','どの え？','sm')}<div class="choices">${ch.map(x=>`<button class="choice em" data-v="${esc(x[0])}" onclick="judgeRead(this)">${x[1]}</button>`).join('')}</div><div id="fb"></div>`);
 }
 function judgeRead(btn){ const ok = btn.dataset.v===RD.w[0]; document.querySelectorAll('.choice').forEach(b=>{ b.disabled=true; if(b.dataset.v===RD.w[0]) b.classList.add('ok'); }); if(!ok) btn.classList.add('ng');
-  answer('r|'+RD.w[0], ok); S.xp += ok?3:0; touchStreak(); save(); speak(RD.w[0]);
+  answer('r|'+RD.w[0], ok); S.xp += ok?3:0; touchStreak(); save(); sfx(ok?'correct':'wrong'); setTimeout(()=>speak(RD.w[0]), 400);
   $('#fb').innerHTML = mascot(ok?'happy':'oops', null, 'sm') + `<div class="fb ${ok?'ok':'ng'}">${ok?'⭕ せいかい！':'❌ こたえは「'+esc(RD.w[0])+'」'}　${RD.w[1]} ${esc(RD.w[0])}</div><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" onclick="proceed(${ok})">${SES?'つぎへ →':'もういっかい'}</button></div>`; }
 function speak(t){ try{ if(!('speechSynthesis' in window)) return; const u=new SpeechSynthesisUtterance(t); u.lang='ja-JP'; u.rate=0.85; speechSynthesis.cancel(); speechSynthesis.speak(u); }catch(e){} }
 
@@ -480,16 +524,16 @@ function buildSession(){
   for(let i=0;i<out.length-1;i++){ if(out[i].kind==='trace'&&out[i].isNew){ const j=out.findIndex((x,k)=>k>i&&x.kind==='write'&&x.ch===out[i].ch); if(j===i+1 && out.length>i+3){ const x=out.splice(j,1)[0]; out.splice(i+3,0,x); } } }
   return {queue: out, done:0, total: out.length, ok:0, newN: fresh.length};
 }
-function startSession(){ SES=buildSession(); if(!SES.queue.length){ toast('きょうの ぶんは おしまい'); SES=null; return; } S.introduced[today()]=(S.introduced[today()]||0)+SES.newN; save(); nextInSession(); }
+function startSession(){ SES=buildSession(); if(!SES.queue.length){ toast('きょうの ぶんは おしまい'); SES=null; return; } bgm('play'); S.introduced[today()]=(S.introduced[today()]||0)+SES.newN; save(); nextInSession(); }
 function nextInSession(){ if(!SES.queue.length){ return endSession(); } const it=SES.queue.shift(); SES.cur=it; if(it.kind==='trace') startTrace(it.ch); else if(it.kind==='write') startWrite(it.ch); else startRead(Math.random()<0.5?'A':'B', it.w); }
 function proceed(ok){ if(!SES){ closeModal(); return; } SES.done++; if(ok) SES.ok++; else { const it=SES.cur; if(it.kind!=='read' && !it.retried){ it.retried=true; SES.queue.splice(Math.min(3,SES.queue.length),0,it); } } nextInSession(); }
-function endSession(){ const n=SES.done, c=SES.ok; const todayN=S.dailyAll[today()]||0, goal=S.dailyGoal; SES=null; render();
+function endSession(){ const n=SES.done, c=SES.ok; const todayN=S.dailyAll[today()]||0, goal=S.dailyGoal; SES=null; render(); bgm('home'); sfx(todayN>=goal?'goal':'end');
   openModal(mascot(todayN>=goal?'cheer':'sleep') + `<h2 style="text-align:center">おつかれさま！</h2><div class="big">${c} / ${n}</div>${todayN>=goal?'<div class="done-banner">🎉 きょうの もくひょう たっせい！</div>':'<p style="text-align:center;font-weight:800;font-family:var(--font-kana)">きょう '+todayN+' / '+goal+'　あと '+(goal-todayN)+'かい</p>'}<div class="row" style="justify-content:center;margin-top:12px"><button class="btn" onclick="closeModal()">もどる</button></div>`); }
-function abortAll(){ clearTimeout(demoTimer); SES=null; closeModal(); }
+function abortAll(){ clearTimeout(demoTimer); SES=null; closeModal(); bgm('home'); }
 
 /* ======================= モーダル・イベント ======================= */
 function openModal(h){ $('#sheet').innerHTML=h; $('#modal').classList.add('on'); $('#sheet').scrollTop=0; }
-function closeModal(){ $('#modal').classList.remove('on'); clearTimeout(demoTimer); render(); }
+function closeModal(){ $('#modal').classList.remove('on'); clearTimeout(demoTimer); render(); if(!SES) bgm('home'); }
 function bind(){
   const m=$('#main');
   const st=$('#start'); if(st) st.onclick=startSession;
